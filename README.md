@@ -7,6 +7,7 @@ This repository holds the initial load scripts for the diskprint database.
 * `02-load-first-os-slice.sql` - Populates the tables holding OS and VM data. This data is collected when creating a baseline OS.
 * `set_up_diskprint_database.sh` - Shell script that runs the above SQL scripts.
 * `set_up_postgres.md` - Human script to set up a Postgres server.
+* `examples/` - Sample SQL statements for populating database tables.
 
 
 ## Configuring
