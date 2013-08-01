@@ -373,12 +373,44 @@ CREATE TABLE diskprint.slice (
     creationdate timestamp without time zone DEFAULT now() NOT NULL,
     slicenotes character varying(1023) NOT NULL,
     slicestate character varying(127) DEFAULT 'latest'::character varying NOT NULL,
-    slicehash character varying(127) NOT NULL,
-    slicepredecessorid integer
+    slicehash character varying(127) NOT NULL
 );
 
 
 ALTER TABLE diskprint.slice OWNER TO postgres;
+
+
+CREATE TABLE diskprint.slicelineage (
+    slicehash character varying(127) NOT NULL,
+    predecessor_slicehash character varying(127) NOT NULL
+);
+
+
+ALTER TABLE diskprint.slicelineage OWNER TO postgres;
+
+
+CREATE TABLE diskprint.sequence (
+    osetid character varying(50) NOT NULL,
+    appetid character varying(50) NOT NULL,
+    sequenceid integer NOT NULL,
+    start_slicehash character varying(127) NOT NULL,
+    end_slicehash character varying(127) NOT NULL
+);
+
+
+ALTER TABLE diskprint.sequence OWNER TO postgres;
+
+
+CREATE SEQUENCE sequence_sequenceid_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE diskprint.sequence_sequenceid_seq OWNER TO postgres;
+ALTER SEQUENCE sequence_sequenceid_seq OWNED BY sequence.sequenceid;
 
 --
 -- TOC entry 1567 (class 1259 OID 20641)
@@ -662,6 +694,9 @@ ALTER TABLE ONLY slice
     ADD CONSTRAINT slice_pkey PRIMARY KEY (sliceid, osetid, appetid);
 
 
+ALTER TABLE ONLY sequence
+    ADD CONSTRAINT sequence_pkey PRIMARY KEY (sequenceid, osetid, appetid);
+
 --
 -- TOC entry 1894 (class 2606 OID 20695)
 -- Dependencies: 1568 1568
@@ -925,10 +960,11 @@ GRANT ALL ON processqueue           TO diskprint_writer;
 GRANT ALL ON regdelta               TO diskprint_writer;
 GRANT ALL ON registry               TO diskprint_writer;
 GRANT ALL ON regresult              TO diskprint_writer;
+GRANT ALL ON sequence               TO diskprint_writer;
 GRANT ALL ON sha1                   TO diskprint_writer;
 GRANT ALL ON slice                  TO diskprint_writer;
 GRANT ALL ON slice_sliceid_seq      TO diskprint_writer;
-GRANT ALL ON slicestate             TO diskprint_writer;
+GRANT ALL ON slicelineage           TO diskprint_writer;
 GRANT ALL ON slicestate             TO diskprint_writer;
 GRANT ALL ON slicetype              TO diskprint_writer;
 GRANT ALL ON storage                TO diskprint_writer;
