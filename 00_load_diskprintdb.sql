@@ -765,6 +765,17 @@ CREATE TRIGGER processtrigger AFTER INSERT ON storage FOR EACH ROW EXECUTE PROCE
 ALTER TABLE ONLY filemetadata
     ADD CONSTRAINT filemetadata_slicehash_fkey FOREIGN KEY (slicehash) REFERENCES storage(slicehash);
 
+ALTER TABLE ONLY slicelineage
+    ADD CONSTRAINT slicelineage_slicehash_fkey FOREIGN KEY (slicehash) REFERENCES storage(slicehash);
+
+ALTER TABLE ONLY slicelineage
+    ADD CONSTRAINT slicelineage_predecessor_slicehash_fkey FOREIGN KEY (predecessor_slicehash) REFERENCES storage(slicehash);
+
+ALTER TABLE ONLY sequence
+    ADD CONSTRAINT sequence_start_slicehash_fkey FOREIGN KEY (start_slicehash) REFERENCES storage(slicehash);
+
+ALTER TABLE ONLY sequence
+    ADD CONSTRAINT sequence_end_slicehash_fkey FOREIGN KEY (end_slicehash) REFERENCES storage(slicehash);
 
 --
 -- TOC entry 1904 (class 2606 OID 29098)
