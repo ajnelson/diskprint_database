@@ -411,6 +411,7 @@ CREATE SEQUENCE sequence_sequenceid_seq
 
 ALTER TABLE diskprint.sequence_sequenceid_seq OWNER TO postgres;
 ALTER SEQUENCE sequence_sequenceid_seq OWNED BY sequence.sequenceid;
+ALTER TABLE sequence ALTER COLUMN sequenceid SET DEFAULT nextval('sequence_sequenceid_seq'::regclass);
 
 --
 -- TOC entry 1567 (class 1259 OID 20641)
