@@ -382,7 +382,7 @@ ALTER TABLE diskprint.slice OWNER TO postgres;
 
 CREATE TABLE diskprint.slicelineage (
     slicehash character varying(127) NOT NULL,
-    predecessor_slicehash character varying(127) NOT NULL
+    predecessor_slicehash character varying(127)
 );
 
 
