@@ -766,11 +766,12 @@ CREATE TRIGGER processtrigger AFTER INSERT ON storage FOR EACH ROW EXECUTE PROCE
 ALTER TABLE ONLY filemetadata
     ADD CONSTRAINT filemetadata_slicehash_fkey FOREIGN KEY (slicehash) REFERENCES storage(slicehash);
 
-ALTER TABLE ONLY slicelineage
-    ADD CONSTRAINT slicelineage_slicehash_fkey FOREIGN KEY (slicehash) REFERENCES storage(slicehash);
+-- AJN TODO Silliness:  NULL is disallowed for storage(slicehash).  NULL is allowed in slicelineage.  This is a foreign key violation not caught until INSERT time.  Haven't googled the solution yet...
+--ALTER TABLE ONLY slicelineage
+--    ADD CONSTRAINT slicelineage_slicehash_fkey FOREIGN KEY (slicehash) REFERENCES storage(slicehash);
 
-ALTER TABLE ONLY slicelineage
-    ADD CONSTRAINT slicelineage_predecessor_slicehash_fkey FOREIGN KEY (predecessor_slicehash) REFERENCES storage(slicehash);
+--ALTER TABLE ONLY slicelineage
+--    ADD CONSTRAINT slicelineage_predecessor_slicehash_fkey FOREIGN KEY (predecessor_slicehash) REFERENCES storage(slicehash);
 
 ALTER TABLE ONLY sequence
     ADD CONSTRAINT sequence_start_slicehash_fkey FOREIGN KEY (start_slicehash) REFERENCES storage(slicehash);
