@@ -696,7 +696,7 @@ ALTER TABLE ONLY slice
 
 
 ALTER TABLE ONLY sequence
-    ADD CONSTRAINT sequence_pkey PRIMARY KEY (sequenceid, osetid, appetid);
+    ADD CONSTRAINT sequence_pkey PRIMARY KEY (osetid, appetid, start_slicehash, end_slicehash);
 
 --
 -- TOC entry 1894 (class 2606 OID 20695)
@@ -968,6 +968,7 @@ GRANT ALL ON filemetadata           TO diskprint_writer;
 GRANT ALL ON hive                   TO diskprint_writer;
 GRANT ALL ON hive_hiveid_seq        TO diskprint_writer;
 GRANT ALL ON md5                    TO diskprint_writer;
+GRANT ALL ON netchatter             TO diskprint_writer;
 GRANT ALL ON os                     TO diskprint_writer;
 GRANT ALL ON processqueue           TO diskprint_writer;
 GRANT ALL ON regdelta               TO diskprint_writer;
