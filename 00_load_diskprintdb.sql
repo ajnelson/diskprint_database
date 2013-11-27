@@ -974,6 +974,7 @@ GRANT ALL ON regdelta               TO diskprint_writer;
 GRANT ALL ON registry               TO diskprint_writer;
 GRANT ALL ON regresult              TO diskprint_writer;
 GRANT ALL ON sequence               TO diskprint_writer;
+GRANT ALL ON sequence_sequenceid_seq TO diskprint_writer;
 GRANT ALL ON sha1                   TO diskprint_writer;
 GRANT ALL ON slice                  TO diskprint_writer;
 GRANT ALL ON slice_sliceid_seq      TO diskprint_writer;
