@@ -192,8 +192,9 @@ ALTER TABLE diskprint.filemetadata OWNER TO postgres;
 CREATE TABLE diskprint.hive (
     hiveid integer NOT NULL,
     hivepath character varying NOT NULL,
-    appetid character varying(50) NOT NULL,
     osetid character varying(50) NOT NULL,
+    appetid character varying(50) NOT NULL,
+    sequenceid integer NOT NULL,
     datetime_ingested_to_postgres timestamp without time zone DEFAULT now() NOT NULL
 );
 
@@ -292,6 +293,7 @@ ALTER TABLE diskprint.processqueue OWNER TO postgres;
 CREATE TABLE diskprint.regdelta (
     osetid character varying(50) NOT NULL,
     appetid character varying(50) NOT NULL,
+    sequenceid integer NOT NULL,
     sliceid integer NOT NULL,
     hiveid integer NOT NULL,
     cellaction integer NOT NULL,
@@ -625,6 +627,10 @@ ALTER TABLE ONLY filemetadata
     ADD CONSTRAINT filemetadata_pkey PRIMARY KEY (slicehash, path, bytes, keyhash);
 
 
+ALTER TABLE ONLY hive
+    ADD CONSTRAINT hive_pkey PRIMARY KEY (osetid, appetid, sequenceid, hivepath);
+
+
 --
 -- TOC entry 1880 (class 2606 OID 20683)
 -- Dependencies: 1556 1556
@@ -685,6 +691,10 @@ ALTER TABLE ONLY registry
     ADD CONSTRAINT registry_pkey PRIMARY KEY (slicehash);
 
 
+ALTER TABLE ONLY sequence
+    ADD CONSTRAINT sequence_pkey PRIMARY KEY (osetid, appetid, start_slicehash, end_slicehash);
+
+
 --
 -- TOC entry 1892 (class 2606 OID 20693)
 -- Dependencies: 1566 1566 1566 1566
@@ -695,8 +705,8 @@ ALTER TABLE ONLY slice
     ADD CONSTRAINT slice_pkey PRIMARY KEY (sliceid, osetid, appetid);
 
 
-ALTER TABLE ONLY sequence
-    ADD CONSTRAINT sequence_pkey PRIMARY KEY (osetid, appetid, start_slicehash, end_slicehash);
+ALTER TABLE ONLY slicelineage
+    ADD CONSTRAINT slicelineage_uniques UNIQUE (slicehash, predecessor_slicehash);
 
 --
 -- TOC entry 1894 (class 2606 OID 20695)
