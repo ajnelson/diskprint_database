@@ -53,6 +53,4 @@ INSERT INTO diskprint.vmsetting (vmid, osetid, vminstancename, organization, sha
 
 -- INSERT INTO slice (virtualmachineid, sliceid, slicetype, etid, applicationetid, creationdate, slicenotes, slicestate, slicepredecessorid) VALUES (1, 1, 'InitialInstall', '11331-2', '11331-2', '2012-03-30 11:11:04.155792', 'Suspended to NAS', 'latest', NULL);
 
--- INSERT INTO storage (sliceid, location, slicehash) VALUES (1, '/Volumes/Storage/dRepository/slices/11331-2/11331-2-10.tar.gz', 'ec1ebb5ec98b6fe7ca6e18ed7fca921bd332eae2');
-
-
+-- INSERT INTO storage (location, hash, filetype, issource) VALUES ('/Volumes/Storage/dRepository/slices/11331-2/11331-2-10.tar.gz', 'ec1ebb5ec98b6fe7ca6e18ed7fca921bd332eae2', 'slice', TRUE);

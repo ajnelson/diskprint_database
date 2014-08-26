@@ -472,9 +472,13 @@ ALTER TABLE diskprint.slicetype OWNER TO postgres;
 -- Name: storage; Type: TABLE; Schema: diskprint; Owner: postgres; Tablespace: 
 --
 
+--AJN The 'file_type' field should be 'pcap' for a .pcap file, 'vm' for a snapshotted virtual machine, or 'slice' for a single-slice tarball.
+
 CREATE TABLE diskprint.storage (
     location character varying(1023) NOT NULL,
-    slicehash character varying(127) NOT NULL
+    hash character varying(127) NOT NULL,
+    filetype character varying(15) NOT NULL,
+    issource boolean NOT NULL
 );
 
 
@@ -774,20 +778,20 @@ CREATE TRIGGER processtrigger AFTER INSERT ON storage FOR EACH ROW EXECUTE PROCE
 --
 
 ALTER TABLE ONLY filemetadata
-    ADD CONSTRAINT filemetadata_slicehash_fkey FOREIGN KEY (slicehash) REFERENCES storage(slicehash);
+    ADD CONSTRAINT filemetadata_slicehash_fkey FOREIGN KEY (slicehash) REFERENCES storage(hash);
 
--- AJN TODO Silliness:  NULL is disallowed for storage(slicehash).  NULL is allowed in slicelineage.  This is a foreign key violation not caught until INSERT time.  Haven't googled the solution yet...
+-- AJN TODO Silliness:  NULL is disallowed for storage(hash).  NULL is allowed in slicelineage.  This is a foreign key violation not caught until INSERT time.  Haven't googled the solution yet...
 --ALTER TABLE ONLY slicelineage
---    ADD CONSTRAINT slicelineage_slicehash_fkey FOREIGN KEY (slicehash) REFERENCES storage(slicehash);
+--    ADD CONSTRAINT slicelineage_slicehash_fkey FOREIGN KEY (slicehash) REFERENCES storage(hash);
 
 --ALTER TABLE ONLY slicelineage
---    ADD CONSTRAINT slicelineage_predecessor_slicehash_fkey FOREIGN KEY (predecessor_slicehash) REFERENCES storage(slicehash);
+--    ADD CONSTRAINT slicelineage_predecessor_slicehash_fkey FOREIGN KEY (predecessor_slicehash) REFERENCES storage(hash);
 
 ALTER TABLE ONLY sequence
-    ADD CONSTRAINT sequence_start_slicehash_fkey FOREIGN KEY (start_slicehash) REFERENCES storage(slicehash);
+    ADD CONSTRAINT sequence_start_slicehash_fkey FOREIGN KEY (start_slicehash) REFERENCES storage(hash);
 
 ALTER TABLE ONLY sequence
-    ADD CONSTRAINT sequence_end_slicehash_fkey FOREIGN KEY (end_slicehash) REFERENCES storage(slicehash);
+    ADD CONSTRAINT sequence_end_slicehash_fkey FOREIGN KEY (end_slicehash) REFERENCES storage(hash);
 
 --
 -- TOC entry 1904 (class 2606 OID 29098)
@@ -796,7 +800,7 @@ ALTER TABLE ONLY sequence
 --
 
 ALTER TABLE ONLY netchatter
-    ADD CONSTRAINT netchatter_slicehash_fkey FOREIGN KEY (slicehash) REFERENCES storage(slicehash);
+    ADD CONSTRAINT netchatter_slicehash_fkey FOREIGN KEY (slicehash) REFERENCES storage(hash);
 
 
 --
@@ -871,7 +875,7 @@ ALTER TABLE ONLY regdelta
 --
 
 ALTER TABLE ONLY registry
-    ADD CONSTRAINT registry_slicehash_fkey FOREIGN KEY (slicehash) REFERENCES storage(slicehash);
+    ADD CONSTRAINT registry_slicehash_fkey FOREIGN KEY (slicehash) REFERENCES storage(hash);
 
 
 --
@@ -891,7 +895,7 @@ ALTER TABLE ONLY slice
 --
 
 ALTER TABLE ONLY slice
-    ADD CONSTRAINT slice_slicehash_fkey FOREIGN KEY (slicehash) REFERENCES storage(slicehash);
+    ADD CONSTRAINT slice_slicehash_fkey FOREIGN KEY (slicehash) REFERENCES storage(hash);
 
 
 --
