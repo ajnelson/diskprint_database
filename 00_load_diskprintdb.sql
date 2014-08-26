@@ -194,7 +194,7 @@ CREATE TABLE diskprint.hive (
     hivepath character varying NOT NULL,
     osetid character varying(50) NOT NULL,
     appetid character varying(50) NOT NULL,
-    sequenceid integer NOT NULL,
+    sequence_id character varying(1023) NOT NULL,
     datetime_ingested_to_postgres timestamp without time zone DEFAULT now() NOT NULL
 );
 
@@ -245,6 +245,18 @@ ALTER TABLE diskprint.md5 OWNER TO postgres;
 -- Dependencies: 6
 -- Name: netchatter; Type: TABLE; Schema: diskprint; Owner: postgres; Tablespace: 
 --
+
+CREATE TABLE diskprint.namedsequence(
+    sequence_id character varying(1023) NOT NULL,
+    osetid character varying(50) NOT NULL,
+    appetid character varying(50) NOT NULL,
+    sliceid character varying(50) NOT NULL,
+    predecessor_osetid character varying(50) NOT NULL,
+    predecessor_appetid character varying(50) NOT NULL,
+    predecessor_sliceid character varying(50) NOT NULL
+);
+
+ALTER TABLE diskprint.namedsequence OWNER TO postgres;
 
 CREATE TABLE diskprint.netchatter (
     location character varying(1023) NOT NULL,
@@ -383,37 +395,17 @@ ALTER TABLE diskprint.slice OWNER TO postgres;
 
 
 CREATE TABLE diskprint.slicelineage (
-    slicehash character varying(127) NOT NULL,
-    predecessor_slicehash character varying(127)
+    osetid character varying(50) NOT NULL,
+    appetid character varying(50) NOT NULL,
+    sliceid integer NOT NULL,
+    predecessor_osetid character varying(50) NOT NULL,
+    predecessor_appetid character varying(50) NOT NULL,
+    predecessor_sliceid integer NOT NULL
 );
 
 
 ALTER TABLE diskprint.slicelineage OWNER TO postgres;
 
-
-CREATE TABLE diskprint.sequence (
-    osetid character varying(50) NOT NULL,
-    appetid character varying(50) NOT NULL,
-    sequenceid integer NOT NULL,
-    start_slicehash character varying(127) NOT NULL,
-    end_slicehash character varying(127) NOT NULL
-);
-
-
-ALTER TABLE diskprint.sequence OWNER TO postgres;
-
-
-CREATE SEQUENCE sequence_sequenceid_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER TABLE diskprint.sequence_sequenceid_seq OWNER TO postgres;
-ALTER SEQUENCE sequence_sequenceid_seq OWNED BY sequence.sequenceid;
-ALTER TABLE sequence ALTER COLUMN sequenceid SET DEFAULT nextval('sequence_sequenceid_seq'::regclass);
 
 --
 -- TOC entry 1567 (class 1259 OID 20641)
@@ -710,7 +702,7 @@ ALTER TABLE ONLY slice
 
 
 ALTER TABLE ONLY slicelineage
-    ADD CONSTRAINT slicelineage_uniques UNIQUE (slicehash, predecessor_slicehash);
+    ADD CONSTRAINT slicelineage_uniques UNIQUE (sliceid, osetid, appetid, predecessor_sliceid, predecessor_osetid, predecessor_appetid);
 
 --
 -- TOC entry 1894 (class 2606 OID 20695)
@@ -782,10 +774,10 @@ ALTER TABLE ONLY filemetadata
 
 -- AJN TODO Silliness:  NULL is disallowed for storage(hash).  NULL is allowed in slicelineage.  This is a foreign key violation not caught until INSERT time.  Haven't googled the solution yet...
 --ALTER TABLE ONLY slicelineage
---    ADD CONSTRAINT slicelineage_slicehash_fkey FOREIGN KEY (slicehash) REFERENCES storage(hash);
+--    ADD CONSTRAINT slicelineage_slicehash_fkey FOREIGN KEY (osetid, appetid, sliceid) REFERENCES slice(osetid, appetid, sliceid);
 
 --ALTER TABLE ONLY slicelineage
---    ADD CONSTRAINT slicelineage_predecessor_slicehash_fkey FOREIGN KEY (predecessor_slicehash) REFERENCES storage(hash);
+--    ADD CONSTRAINT slicelineage_predecessor_slicehash_fkey FOREIGN KEY (predecessor_osetid, predecessor_appetid, predecessor_sliceid) REFERENCES slice(osetid, appetid, sliceid);
 
 ALTER TABLE ONLY sequence
     ADD CONSTRAINT sequence_start_slicehash_fkey FOREIGN KEY (start_slicehash) REFERENCES storage(hash);
@@ -982,14 +974,13 @@ GRANT ALL ON filemetadata           TO diskprint_writer;
 GRANT ALL ON hive                   TO diskprint_writer;
 GRANT ALL ON hive_hiveid_seq        TO diskprint_writer;
 GRANT ALL ON md5                    TO diskprint_writer;
+GRANT ALL ON namedsequence          TO diskprint_writer;
 GRANT ALL ON netchatter             TO diskprint_writer;
 GRANT ALL ON os                     TO diskprint_writer;
 GRANT ALL ON processqueue           TO diskprint_writer;
 GRANT ALL ON regdelta               TO diskprint_writer;
 GRANT ALL ON registry               TO diskprint_writer;
 GRANT ALL ON regresult              TO diskprint_writer;
-GRANT ALL ON sequence               TO diskprint_writer;
-GRANT ALL ON sequence_sequenceid_seq TO diskprint_writer;
 GRANT ALL ON sha1                   TO diskprint_writer;
 GRANT ALL ON slice                  TO diskprint_writer;
 GRANT ALL ON slice_sliceid_seq      TO diskprint_writer;
