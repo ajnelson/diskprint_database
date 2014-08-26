@@ -387,7 +387,9 @@ CREATE TABLE diskprint.slice (
     creationdate timestamp without time zone DEFAULT now() NOT NULL,
     slicenotes character varying(1023) NOT NULL,
     slicestate character varying(127) DEFAULT 'latest'::character varying NOT NULL,
-    slicehash character varying(127) NOT NULL
+    diskhash character varying(127) NOT NULL,
+    ramhash character varying(127),
+    pcaphash character varying(127)
 );
 
 
@@ -464,7 +466,7 @@ ALTER TABLE diskprint.slicetype OWNER TO postgres;
 -- Name: storage; Type: TABLE; Schema: diskprint; Owner: postgres; Tablespace: 
 --
 
---AJN The 'file_type' field should be 'pcap' for a .pcap file, 'vm' for a snapshotted virtual machine, or 'slice' for a single-slice tarball.
+--AJN The 'file_type' field should be 'pcap' for a .pcap file, 'disk' for a disk image file, 'ram' for a memory file, 'vm' for a snapshotted virtual machine, or 'slice' for a single-slice tarball.
 
 CREATE TABLE diskprint.storage (
     location character varying(1023) NOT NULL,
