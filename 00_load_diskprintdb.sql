@@ -386,10 +386,7 @@ CREATE TABLE diskprint.slice (
     appetid character varying(50) NOT NULL,
     creationdate timestamp without time zone DEFAULT now() NOT NULL,
     slicenotes character varying(1023) NOT NULL,
-    slicestate character varying(127) DEFAULT 'latest'::character varying NOT NULL,
-    diskhash character varying(127) NOT NULL,
-    ramhash character varying(127),
-    pcaphash character varying(127)
+    slicestate character varying(127) DEFAULT 'latest'::character varying NOT NULL
 );
 
 
@@ -467,8 +464,14 @@ ALTER TABLE diskprint.slicetype OWNER TO postgres;
 --
 
 --AJN The 'file_type' field should be 'pcap' for a .pcap file, 'disk' for a disk image file, 'ram' for a memory file, 'vm' for a snapshotted virtual machine, or 'slice' for a single-slice tarball.
+--AJN The hash should be the hash of the "subject data," not necessarily the file.  If stored in a raw format, then the hash is of the file.  In the case of disk images, the hash should be of the disk image stored within the file, not of the file itself.  (.E01 files embed timestamps at generation, making consistent hashing between repeated extractions impossible without carefully adjusting the system clock.)
+--AJN The hash should NOT be used as a foreign key.  Multiple slices can share the same disk state (e.g. the OS might not touch the disk).
+--AJN The "sliceid" field can be null, because a snapshotted virtual machine doesn't necessarily contain a unique slice---it can contain multiple slices.
 
 CREATE TABLE diskprint.storage (
+    osetid character varying(50) NOT NULL,
+    appetid character varying(50) NOT NULL,
+    sliceid integer,
     location character varying(1023) NOT NULL,
     hash character varying(127) NOT NULL,
     filetype character varying(15) NOT NULL,
