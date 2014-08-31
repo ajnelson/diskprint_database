@@ -250,10 +250,10 @@ CREATE TABLE diskprint.namedsequence(
     sequence_id character varying(1023) NOT NULL,
     osetid character varying(50) NOT NULL,
     appetid character varying(50) NOT NULL,
-    sliceid character varying(50) NOT NULL,
-    predecessor_osetid character varying(50) NOT NULL,
-    predecessor_appetid character varying(50) NOT NULL,
-    predecessor_sliceid character varying(50) NOT NULL
+    sliceid integer NOT NULL,
+    predecessor_osetid character varying(50),
+    predecessor_appetid character varying(50),
+    predecessor_sliceid integer
 );
 
 ALTER TABLE diskprint.namedsequence OWNER TO postgres;
