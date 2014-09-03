@@ -377,13 +377,16 @@ ALTER TABLE diskprint.sha1 OWNER TO postgres;
 -- Name: slice; Type: TABLE; Schema: diskprint; Owner: postgres; Tablespace: 
 --
 
---AJN TODO Add slicestate and slicehash to the generating code, and remove vmmachineid.
+--AJN TODO Add slicestate and slicehash to the generating code.
 --AJN TODO Check to see if slicetype 'Open' is being generated with a trailing whitespace in the string.
 CREATE TABLE diskprint.slice (
-    sliceid integer NOT NULL,
-    slicetype character varying(32) DEFAULT 'Default'::character varying NOT NULL,
     osetid character varying(50) NOT NULL,
     appetid character varying(50) NOT NULL,
+    sliceid integer NOT NULL,
+    predecessor_osetid character varying(50),
+    predecessor_appetid character varying(50),
+    predecessor_sliceid integer,
+    slicetype character varying(32) DEFAULT 'Default'::character varying NOT NULL,
     creationdate timestamp without time zone DEFAULT now() NOT NULL,
     slicenotes character varying(1023) NOT NULL,
     slicestate character varying(127) DEFAULT 'latest'::character varying NOT NULL
