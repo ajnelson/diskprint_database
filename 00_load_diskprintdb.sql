@@ -63,23 +63,6 @@ ALTER PROCEDURAL LANGUAGE plpgsql OWNER TO postgres;
 
 SET search_path = diskprint, pg_catalog;
 
---
--- TOC entry 18 (class 1255 OID 20557)
--- Dependencies: 6 359
--- Name: queueprocess(); Type: FUNCTION; Schema: diskprint; Owner: postgres
---
-
-CREATE FUNCTION queueprocess() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-	INSERT INTO diskprint.processqueue (location, slicehash)
-	VALUES (NEW.location, NEW.slicehash);
-RETURN NULL;
-END;$$;
-
-
-ALTER FUNCTION diskprint.queueprocess() OWNER TO postgres;
 
 SET default_tablespace = '';
 
@@ -282,19 +265,6 @@ CREATE TABLE diskprint.os (
 
 ALTER TABLE diskprint.os OWNER TO postgres;
 
---
--- TOC entry 1561 (class 1259 OID 20596)
--- Dependencies: 6
--- Name: processqueue; Type: TABLE; Schema: diskprint; Owner: postgres; Tablespace: 
---
-
-CREATE TABLE diskprint.processqueue (
-    location character varying(1023),
-    slicehash character varying(127) NOT NULL
-);
-
-
-ALTER TABLE diskprint.processqueue OWNER TO postgres;
 
 --
 -- TOC entry 1562 (class 1259 OID 20602)
@@ -676,16 +646,6 @@ ALTER TABLE ONLY os
 
 
 --
--- TOC entry 1888 (class 2606 OID 20689)
--- Dependencies: 1561 1561
--- Name: processqueue_pkey; Type: CONSTRAINT; Schema: diskprint; Owner: postgres; Tablespace: 
---
-
-ALTER TABLE ONLY processqueue
-    ADD CONSTRAINT processqueue_pkey PRIMARY KEY (slicehash);
-
-
---
 -- TOC entry 1890 (class 2606 OID 20691)
 -- Dependencies: 1563 1563
 -- Name: registry_pkey; Type: CONSTRAINT; Schema: diskprint; Owner: postgres; Tablespace: 
@@ -760,15 +720,6 @@ ALTER TABLE ONLY virtualmachine
 
 ALTER TABLE ONLY vmsetting
     ADD CONSTRAINT vmsetting_osetid_key UNIQUE (osetid);
-
-
---
--- TOC entry 1918 (class 2620 OID 20704)
--- Dependencies: 1570 18
--- Name: processtrigger; Type: TRIGGER; Schema: diskprint; Owner: postgres
---
-
-CREATE TRIGGER processtrigger AFTER INSERT ON storage FOR EACH ROW EXECUTE PROCEDURE queueprocess();
 
 
 --
@@ -985,7 +936,6 @@ GRANT ALL ON md5                    TO diskprint_writer;
 GRANT ALL ON namedsequence          TO diskprint_writer;
 GRANT ALL ON netchatter             TO diskprint_writer;
 GRANT ALL ON os                     TO diskprint_writer;
-GRANT ALL ON processqueue           TO diskprint_writer;
 GRANT ALL ON regdelta               TO diskprint_writer;
 GRANT ALL ON registry               TO diskprint_writer;
 GRANT ALL ON regresult              TO diskprint_writer;
