@@ -153,8 +153,10 @@ ALTER SEQUENCE celltype_celltypeid_seq OWNED BY celltype.celltypeid;
 --
 
 CREATE TABLE diskprint.filemetadata (
+    osetid character varying(50) NOT NULL,
+    appetid character varying(50) NOT NULL,
+    sliceid integer NOT NULL,
     keyhash character varying(64) NOT NULL,
-    slicehash character varying(127) NOT NULL,
     path character varying(1023) NOT NULL,
     filename character varying(255) NOT NULL,
     extension character varying(255) DEFAULT ''::character varying NOT NULL,
@@ -177,7 +179,7 @@ CREATE TABLE diskprint.hive (
     hivepath character varying NOT NULL,
     osetid character varying(50) NOT NULL,
     appetid character varying(50) NOT NULL,
-    sequence_id character varying(1023) NOT NULL,
+    sequenceid character varying(1023) NOT NULL,
     datetime_ingested_to_postgres timestamp without time zone DEFAULT now() NOT NULL
 );
 
@@ -223,14 +225,9 @@ CREATE TABLE diskprint.md5 (
 
 ALTER TABLE diskprint.md5 OWNER TO postgres;
 
---
--- TOC entry 1559 (class 1259 OID 20587)
--- Dependencies: 6
--- Name: netchatter; Type: TABLE; Schema: diskprint; Owner: postgres; Tablespace: 
---
 
 CREATE TABLE diskprint.namedsequence(
-    sequence_id character varying(1023) NOT NULL,
+    sequenceid character varying(1023) NOT NULL,
     osetid character varying(50) NOT NULL,
     appetid character varying(50) NOT NULL,
     sliceid integer NOT NULL,
@@ -241,13 +238,6 @@ CREATE TABLE diskprint.namedsequence(
 
 ALTER TABLE diskprint.namedsequence OWNER TO postgres;
 
-CREATE TABLE diskprint.netchatter (
-    location character varying(1023) NOT NULL,
-    slicehash character varying(127) NOT NULL
-);
-
-
-ALTER TABLE diskprint.netchatter OWNER TO postgres;
 
 --
 -- TOC entry 1560 (class 1259 OID 20593)
@@ -303,7 +293,9 @@ ALTER TABLE diskprint.regdelta OWNER TO postgres;
 --
 
 CREATE TABLE diskprint.registry (
-    slicehash character varying(127) NOT NULL,
+    osetid character varying(50) NOT NULL,
+    appetid character varying(50) NOT NULL,
+    sliceid integer NOT NULL,
     regfilepath character varying(255) NOT NULL,
     regfilename character varying(255) NOT NULL,
     regfilehash character varying(127) NOT NULL
@@ -311,21 +303,6 @@ CREATE TABLE diskprint.registry (
 
 
 ALTER TABLE diskprint.registry OWNER TO postgres;
-
---
--- TOC entry 1564 (class 1259 OID 20623)
--- Dependencies: 6
--- Name: regresult; Type: TABLE; Schema: diskprint; Owner: postgres; Tablespace: 
---
-
-CREATE TABLE diskprint.regresult (
-    location character varying(255) NOT NULL,
-    metadata character varying(255) NOT NULL,
-    slicehash character varying(127) NOT NULL
-);
-
-
-ALTER TABLE diskprint.regresult OWNER TO postgres;
 
 --
 -- TOC entry 1565 (class 1259 OID 20629)
@@ -347,7 +324,6 @@ ALTER TABLE diskprint.sha1 OWNER TO postgres;
 -- Name: slice; Type: TABLE; Schema: diskprint; Owner: postgres; Tablespace: 
 --
 
---AJN TODO Add slicestate and slicehash to the generating code.
 --AJN TODO Check to see if slicetype 'Open' is being generated with a trailing whitespace in the string.
 CREATE TABLE diskprint.slice (
     osetid character varying(50) NOT NULL,
@@ -364,19 +340,6 @@ CREATE TABLE diskprint.slice (
 
 
 ALTER TABLE diskprint.slice OWNER TO postgres;
-
-
-CREATE TABLE diskprint.slicelineage (
-    osetid character varying(50) NOT NULL,
-    appetid character varying(50) NOT NULL,
-    sliceid integer NOT NULL,
-    predecessor_osetid character varying(50) NOT NULL,
-    predecessor_appetid character varying(50) NOT NULL,
-    predecessor_sliceid integer NOT NULL
-);
-
-
-ALTER TABLE diskprint.slicelineage OWNER TO postgres;
 
 
 --
@@ -598,7 +561,7 @@ ALTER TABLE ONLY celltype
 --
 
 ALTER TABLE ONLY filemetadata
-    ADD CONSTRAINT filemetadata_pkey PRIMARY KEY (slicehash, path, bytes, keyhash);
+    ADD CONSTRAINT filemetadata_pkey PRIMARY KEY (osetid, appetid, sliceid, path, bytes, keyhash);
 
 
 ALTER TABLE ONLY hive
@@ -626,16 +589,6 @@ ALTER TABLE ONLY md5
 
 
 --
--- TOC entry 1884 (class 2606 OID 20685)
--- Dependencies: 1559 1559
--- Name: netchatter_pkey; Type: CONSTRAINT; Schema: diskprint; Owner: postgres; Tablespace: 
---
-
-ALTER TABLE ONLY netchatter
-    ADD CONSTRAINT netchatter_pkey PRIMARY KEY (slicehash);
-
-
---
 -- TOC entry 1886 (class 2606 OID 20687)
 -- Dependencies: 1560 1560
 -- Name: os_etid_key; Type: CONSTRAINT; Schema: diskprint; Owner: postgres; Tablespace: 
@@ -652,11 +605,7 @@ ALTER TABLE ONLY os
 --
 
 ALTER TABLE ONLY registry
-    ADD CONSTRAINT registry_pkey PRIMARY KEY (slicehash);
-
-
-ALTER TABLE ONLY sequence
-    ADD CONSTRAINT sequence_pkey PRIMARY KEY (osetid, appetid, start_slicehash, end_slicehash);
+    ADD CONSTRAINT registry_pkey PRIMARY KEY (osetid, appetid, sliceid);
 
 
 --
@@ -668,9 +617,6 @@ ALTER TABLE ONLY sequence
 ALTER TABLE ONLY slice
     ADD CONSTRAINT slice_pkey PRIMARY KEY (sliceid, osetid, appetid);
 
-
-ALTER TABLE ONLY slicelineage
-    ADD CONSTRAINT slicelineage_uniques UNIQUE (sliceid, osetid, appetid, predecessor_sliceid, predecessor_osetid, predecessor_appetid);
 
 --
 -- TOC entry 1894 (class 2606 OID 20695)
@@ -699,7 +645,7 @@ ALTER TABLE ONLY slicetype
 --
 
 ALTER TABLE ONLY storage
-    ADD CONSTRAINT storage_pkey PRIMARY KEY (slicehash);
+    ADD CONSTRAINT storage_pkey PRIMARY KEY (osetid, appetid, sliceid, hash, filetype, issource);
 
 
 --
@@ -725,33 +671,11 @@ ALTER TABLE ONLY vmsetting
 --
 -- TOC entry 1903 (class 2606 OID 29142)
 -- Dependencies: 1555 1570 1897
--- Name: filemetadata_slicehash_fkey; Type: FK CONSTRAINT; Schema: diskprint; Owner: postgres
+-- Name: filemetadata_fkey; Type: FK CONSTRAINT; Schema: diskprint; Owner: postgres
 --
 
 ALTER TABLE ONLY filemetadata
-    ADD CONSTRAINT filemetadata_slicehash_fkey FOREIGN KEY (slicehash) REFERENCES storage(hash);
-
--- AJN TODO Silliness:  NULL is disallowed for storage(hash).  NULL is allowed in slicelineage.  This is a foreign key violation not caught until INSERT time.  Haven't googled the solution yet...
---ALTER TABLE ONLY slicelineage
---    ADD CONSTRAINT slicelineage_slicehash_fkey FOREIGN KEY (osetid, appetid, sliceid) REFERENCES slice(osetid, appetid, sliceid);
-
---ALTER TABLE ONLY slicelineage
---    ADD CONSTRAINT slicelineage_predecessor_slicehash_fkey FOREIGN KEY (predecessor_osetid, predecessor_appetid, predecessor_sliceid) REFERENCES slice(osetid, appetid, sliceid);
-
-ALTER TABLE ONLY sequence
-    ADD CONSTRAINT sequence_start_slicehash_fkey FOREIGN KEY (start_slicehash) REFERENCES storage(hash);
-
-ALTER TABLE ONLY sequence
-    ADD CONSTRAINT sequence_end_slicehash_fkey FOREIGN KEY (end_slicehash) REFERENCES storage(hash);
-
---
--- TOC entry 1904 (class 2606 OID 29098)
--- Dependencies: 1559 1897 1570
--- Name: netchatter_slicehash_fkey; Type: FK CONSTRAINT; Schema: diskprint; Owner: postgres
---
-
-ALTER TABLE ONLY netchatter
-    ADD CONSTRAINT netchatter_slicehash_fkey FOREIGN KEY (slicehash) REFERENCES storage(hash);
+    ADD CONSTRAINT filemetadata_fkey FOREIGN KEY (osetid, appetid, sliceid) REFERENCES slice(osetid, appetid, sliceid);
 
 
 --
@@ -822,11 +746,11 @@ ALTER TABLE ONLY regdelta
 --
 -- TOC entry 1911 (class 2606 OID 20735)
 -- Dependencies: 1570 1897 1563
--- Name: registry_slicehash_fkey; Type: FK CONSTRAINT; Schema: diskprint; Owner: postgres
+-- Name: registry_fkey; Type: FK CONSTRAINT; Schema: diskprint; Owner: postgres
 --
 
 ALTER TABLE ONLY registry
-    ADD CONSTRAINT registry_slicehash_fkey FOREIGN KEY (slicehash) REFERENCES storage(hash);
+    ADD CONSTRAINT registry_fkey FOREIGN KEY (osetid, appetid, sliceid) REFERENCES slice(osetid, appetid, sliceid);
 
 
 --
@@ -837,16 +761,6 @@ ALTER TABLE ONLY registry
 
 ALTER TABLE ONLY slice
     ADD CONSTRAINT slice_etid_fkey FOREIGN KEY (osetid) REFERENCES os(osetid);
-
-
---
--- TOC entry 1915 (class 2606 OID 29168)
--- Dependencies: 1566 1570 1897
--- Name: slice_slicehash_fkey; Type: FK CONSTRAINT; Schema: diskprint; Owner: postgres
---
-
-ALTER TABLE ONLY slice
-    ADD CONSTRAINT slice_slicehash_fkey FOREIGN KEY (slicehash) REFERENCES storage(hash);
 
 
 --
@@ -867,6 +781,16 @@ ALTER TABLE ONLY slice
 
 ALTER TABLE ONLY slice
     ADD CONSTRAINT slice_slicetype_fkey FOREIGN KEY (slicetype) REFERENCES slicetype(type);
+
+
+--
+-- TOC entry 1915 (class 2606 OID 29168)
+-- Dependencies: 1566 1570 1897
+-- Name: storage_fkey; Type: FK CONSTRAINT; Schema: diskprint; Owner: postgres
+--
+
+ALTER TABLE ONLY storage
+    ADD CONSTRAINT storage_fkey FOREIGN KEY (osetid, appetid, sliceid) REFERENCES slice(osetid, appetid, sliceid);
 
 
 --
@@ -934,15 +858,12 @@ GRANT ALL ON hive                   TO diskprint_writer;
 GRANT ALL ON hive_hiveid_seq        TO diskprint_writer;
 GRANT ALL ON md5                    TO diskprint_writer;
 GRANT ALL ON namedsequence          TO diskprint_writer;
-GRANT ALL ON netchatter             TO diskprint_writer;
 GRANT ALL ON os                     TO diskprint_writer;
 GRANT ALL ON regdelta               TO diskprint_writer;
 GRANT ALL ON registry               TO diskprint_writer;
-GRANT ALL ON regresult              TO diskprint_writer;
 GRANT ALL ON sha1                   TO diskprint_writer;
 GRANT ALL ON slice                  TO diskprint_writer;
 GRANT ALL ON slice_sliceid_seq      TO diskprint_writer;
-GRANT ALL ON slicelineage           TO diskprint_writer;
 GRANT ALL ON slicestate             TO diskprint_writer;
 GRANT ALL ON slicetype              TO diskprint_writer;
 GRANT ALL ON storage                TO diskprint_writer;
