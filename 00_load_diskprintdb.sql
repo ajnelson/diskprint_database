@@ -179,7 +179,7 @@ CREATE TABLE diskprint.hive (
     hivepath character varying NOT NULL,
     osetid character varying(50) NOT NULL,
     appetid character varying(50) NOT NULL,
-    sequenceid character varying(1023) NOT NULL,
+    sequenceid integer NOT NULL,
     datetime_ingested_to_postgres timestamp without time zone DEFAULT now() NOT NULL
 );
 
@@ -226,8 +226,8 @@ CREATE TABLE diskprint.md5 (
 ALTER TABLE diskprint.md5 OWNER TO postgres;
 
 
-CREATE TABLE diskprint.namedsequence(
-    sequenceid character varying(1023) NOT NULL,
+CREATE TABLE diskprint.namedsequence (
+    sequencelabel character varying(1023) NOT NULL,
     osetid character varying(50) NOT NULL,
     appetid character varying(50) NOT NULL,
     sliceid integer NOT NULL,
@@ -238,6 +238,23 @@ CREATE TABLE diskprint.namedsequence(
 
 ALTER TABLE diskprint.namedsequence OWNER TO postgres;
 
+CREATE TABLE diskprint.namedsequenceid (
+    sequencelabel character varying(1023) NOT NULL,
+    sequenceid integer NOT NULL
+);
+
+ALTER TABLE diskprint.namedsequenceid OWNER TO postgres;
+
+CREATE SEQUENCE namedsequenceid_sequenceid_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+ALTER SEQUENCE namedsequenceid_sequenceid_seq OWNED BY namedsequenceid.sequenceid;
+
+ALTER TABLE namedsequenceid ALTER COLUMN sequenceid SET DEFAULT nextval('namedsequenceid_sequenceid_seq'::regclass);
 
 --
 -- TOC entry 1560 (class 1259 OID 20593)
@@ -588,6 +605,13 @@ ALTER TABLE ONLY md5
     ADD CONSTRAINT md5_pkey PRIMARY KEY (keyhash, hashval);
 
 
+ALTER TABLE ONLY namedsequenceid
+    ADD CONSTRAINT namedsequenceid_key UNIQUE (sequencelabel);
+
+ALTER TABLE ONLY namedsequenceid
+    ADD CONSTRAINT namedsequenceid_pkey PRIMARY KEY (sequenceid);
+
+
 --
 -- TOC entry 1886 (class 2606 OID 20687)
 -- Dependencies: 1560 1560
@@ -676,6 +700,10 @@ ALTER TABLE ONLY vmsetting
 
 ALTER TABLE ONLY filemetadata
     ADD CONSTRAINT filemetadata_fkey FOREIGN KEY (osetid, appetid, sliceid) REFERENCES slice(osetid, appetid, sliceid);
+
+
+ALTER TABLE ONLY namedsequence
+    ADD CONSTRAINT namedsequence_fkey FOREIGN KEY (sequencelabel) REFERENCES namedsequenceid(sequencelabel);
 
 
 --
@@ -858,6 +886,8 @@ GRANT ALL ON hive                   TO diskprint_writer;
 GRANT ALL ON hive_hiveid_seq        TO diskprint_writer;
 GRANT ALL ON md5                    TO diskprint_writer;
 GRANT ALL ON namedsequence          TO diskprint_writer;
+GRANT ALL ON namedsequenceid        TO diskprint_writer;
+GRANT ALL ON namedsequenceid_sequenceid_seq TO diskprint_writer;
 GRANT ALL ON os                     TO diskprint_writer;
 GRANT ALL ON regdelta               TO diskprint_writer;
 GRANT ALL ON registry               TO diskprint_writer;
