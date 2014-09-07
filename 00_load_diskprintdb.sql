@@ -177,10 +177,7 @@ ALTER TABLE diskprint.filemetadata OWNER TO postgres;
 CREATE TABLE diskprint.hive (
     hiveid integer NOT NULL,
     hivepath character varying NOT NULL,
-    osetid character varying(50) NOT NULL,
-    appetid character varying(50) NOT NULL,
-    sequenceid integer NOT NULL,
-    datetime_ingested_to_postgres timestamp without time zone DEFAULT now() NOT NULL
+    sequenceid integer NOT NULL
 );
 
 
@@ -280,9 +277,9 @@ ALTER TABLE diskprint.os OWNER TO postgres;
 --
 
 CREATE TABLE diskprint.regdelta (
+    sequenceid integer NOT NULL,
     osetid character varying(50) NOT NULL,
     appetid character varying(50) NOT NULL,
-    sequenceid integer NOT NULL,
     sliceid integer NOT NULL,
     hiveid integer NOT NULL,
     cellaction integer NOT NULL,
@@ -582,7 +579,7 @@ ALTER TABLE ONLY filemetadata
 
 
 ALTER TABLE ONLY hive
-    ADD CONSTRAINT hive_pkey PRIMARY KEY (osetid, appetid, sequenceid, hivepath);
+    ADD CONSTRAINT hive_pkey PRIMARY KEY (sequenceid, hivepath);
 
 
 --
@@ -702,6 +699,10 @@ ALTER TABLE ONLY filemetadata
     ADD CONSTRAINT filemetadata_fkey FOREIGN KEY (osetid, appetid, sliceid) REFERENCES slice(osetid, appetid, sliceid);
 
 
+ALTER TABLE ONLY hive
+    ADD CONSTRAINT hive_fkey FOREIGN KEY (sequenceid) REFERENCES namedsequenceid(sequenceid);
+
+
 ALTER TABLE ONLY namedsequence
     ADD CONSTRAINT namedsequence_fkey FOREIGN KEY (sequencelabel) REFERENCES namedsequenceid(sequencelabel);
 
@@ -723,10 +724,13 @@ ALTER TABLE ONLY os
 --
 
 ALTER TABLE ONLY regdelta
-    ADD CONSTRAINT regdelta_sliceid_fkey FOREIGN KEY (sliceid, osetid, appetid) REFERENCES slice(sliceid, osetid, appetid);
+    ADD CONSTRAINT regdelta_cellaction_fkey FOREIGN KEY (cellaction) REFERENCES cell(actionid);
 
 ALTER TABLE ONLY regdelta
-    ADD CONSTRAINT regdelta_cellaction_fkey FOREIGN KEY (cellaction) REFERENCES cell(actionid);
+    ADD CONSTRAINT regdelta_sequenceid_fkey FOREIGN KEY (sequenceid) REFERENCES namedsequenceid(sequenceid);
+
+ALTER TABLE ONLY regdelta
+    ADD CONSTRAINT regdelta_sliceid_fkey FOREIGN KEY (sliceid, osetid, appetid) REFERENCES slice(sliceid, osetid, appetid);
 
 
 --
