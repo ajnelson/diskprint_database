@@ -602,8 +602,13 @@ ALTER TABLE ONLY md5
     ADD CONSTRAINT md5_pkey PRIMARY KEY (keyhash, hashval);
 
 
+ALTER TABLE ONLY namedsequence
+    ADD CONSTRAINT namedsequence_pkey PRIMARY KEY (sequencelabel, osetid, appetid, sliceid, predecessor_osetid, predecessor_appetid, predecessor_sliceid);
+
+
 ALTER TABLE ONLY namedsequenceid
     ADD CONSTRAINT namedsequenceid_key UNIQUE (sequencelabel);
+
 
 ALTER TABLE ONLY namedsequenceid
     ADD CONSTRAINT namedsequenceid_pkey PRIMARY KEY (sequenceid);
