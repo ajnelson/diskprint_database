@@ -602,8 +602,9 @@ ALTER TABLE ONLY md5
     ADD CONSTRAINT md5_pkey PRIMARY KEY (keyhash, hashval);
 
 
-ALTER TABLE ONLY namedsequence
-    ADD CONSTRAINT namedsequence_pkey PRIMARY KEY (sequencelabel, osetid, appetid, sliceid, predecessor_osetid, predecessor_appetid, predecessor_sliceid);
+--AJN Don't do this.  The primary key constraint requires predecessor_* to be non-null, but we want to allow nulls on those three fields.
+--ALTER TABLE ONLY namedsequence
+--    ADD CONSTRAINT namedsequence_pkey PRIMARY KEY (sequencelabel, osetid, appetid, sliceid, predecessor_osetid, predecessor_appetid, predecessor_sliceid);
 
 
 ALTER TABLE ONLY namedsequenceid
