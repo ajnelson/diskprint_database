@@ -63,23 +63,6 @@ ALTER PROCEDURAL LANGUAGE plpgsql OWNER TO postgres;
 
 SET search_path = diskprint, pg_catalog;
 
---
--- TOC entry 18 (class 1255 OID 20557)
--- Dependencies: 6 359
--- Name: queueprocess(); Type: FUNCTION; Schema: diskprint; Owner: postgres
---
-
-CREATE FUNCTION queueprocess() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-	INSERT INTO diskprint.processqueue (location, slicehash)
-	VALUES (NEW.location, NEW.slicehash);
-RETURN NULL;
-END;$$;
-
-
-ALTER FUNCTION diskprint.queueprocess() OWNER TO postgres;
 
 SET default_tablespace = '';
 
@@ -170,8 +153,10 @@ ALTER SEQUENCE celltype_celltypeid_seq OWNED BY celltype.celltypeid;
 --
 
 CREATE TABLE diskprint.filemetadata (
+    osetid character varying(50) NOT NULL,
+    appetid character varying(50) NOT NULL,
+    sliceid integer NOT NULL,
     keyhash character varying(64) NOT NULL,
-    slicehash character varying(127) NOT NULL,
     path character varying(1023) NOT NULL,
     filename character varying(255) NOT NULL,
     extension character varying(255) DEFAULT ''::character varying NOT NULL,
@@ -192,9 +177,7 @@ ALTER TABLE diskprint.filemetadata OWNER TO postgres;
 CREATE TABLE diskprint.hive (
     hiveid integer NOT NULL,
     hivepath character varying NOT NULL,
-    appetid character varying(50) NOT NULL,
-    osetid character varying(50) NOT NULL,
-    datetime_ingested_to_postgres timestamp without time zone DEFAULT now() NOT NULL
+    sequenceid integer NOT NULL
 );
 
 
@@ -239,19 +222,36 @@ CREATE TABLE diskprint.md5 (
 
 ALTER TABLE diskprint.md5 OWNER TO postgres;
 
---
--- TOC entry 1559 (class 1259 OID 20587)
--- Dependencies: 6
--- Name: netchatter; Type: TABLE; Schema: diskprint; Owner: postgres; Tablespace: 
---
 
-CREATE TABLE diskprint.netchatter (
-    location character varying(1023) NOT NULL,
-    slicehash character varying(127) NOT NULL
+CREATE TABLE diskprint.namedsequence (
+    sequencelabel character varying(1023) NOT NULL,
+    osetid character varying(50) NOT NULL,
+    appetid character varying(50) NOT NULL,
+    sliceid integer NOT NULL,
+    predecessor_osetid character varying(50),
+    predecessor_appetid character varying(50),
+    predecessor_sliceid integer
 );
 
+ALTER TABLE diskprint.namedsequence OWNER TO postgres;
 
-ALTER TABLE diskprint.netchatter OWNER TO postgres;
+CREATE TABLE diskprint.namedsequenceid (
+    sequencelabel character varying(1023) NOT NULL,
+    sequenceid integer NOT NULL
+);
+
+ALTER TABLE diskprint.namedsequenceid OWNER TO postgres;
+
+CREATE SEQUENCE namedsequenceid_sequenceid_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+ALTER SEQUENCE namedsequenceid_sequenceid_seq OWNED BY namedsequenceid.sequenceid;
+
+ALTER TABLE namedsequenceid ALTER COLUMN sequenceid SET DEFAULT nextval('namedsequenceid_sequenceid_seq'::regclass);
 
 --
 -- TOC entry 1560 (class 1259 OID 20593)
@@ -269,19 +269,6 @@ CREATE TABLE diskprint.os (
 
 ALTER TABLE diskprint.os OWNER TO postgres;
 
---
--- TOC entry 1561 (class 1259 OID 20596)
--- Dependencies: 6
--- Name: processqueue; Type: TABLE; Schema: diskprint; Owner: postgres; Tablespace: 
---
-
-CREATE TABLE diskprint.processqueue (
-    location character varying(1023),
-    slicehash character varying(127) NOT NULL
-);
-
-
-ALTER TABLE diskprint.processqueue OWNER TO postgres;
 
 --
 -- TOC entry 1562 (class 1259 OID 20602)
@@ -290,6 +277,7 @@ ALTER TABLE diskprint.processqueue OWNER TO postgres;
 --
 
 CREATE TABLE diskprint.regdelta (
+    sequenceid integer NOT NULL,
     osetid character varying(50) NOT NULL,
     appetid character varying(50) NOT NULL,
     sliceid integer NOT NULL,
@@ -319,7 +307,9 @@ ALTER TABLE diskprint.regdelta OWNER TO postgres;
 --
 
 CREATE TABLE diskprint.registry (
-    slicehash character varying(127) NOT NULL,
+    osetid character varying(50) NOT NULL,
+    appetid character varying(50) NOT NULL,
+    sliceid integer NOT NULL,
     regfilepath character varying(255) NOT NULL,
     regfilename character varying(255) NOT NULL,
     regfilehash character varying(127) NOT NULL
@@ -327,21 +317,6 @@ CREATE TABLE diskprint.registry (
 
 
 ALTER TABLE diskprint.registry OWNER TO postgres;
-
---
--- TOC entry 1564 (class 1259 OID 20623)
--- Dependencies: 6
--- Name: regresult; Type: TABLE; Schema: diskprint; Owner: postgres; Tablespace: 
---
-
-CREATE TABLE diskprint.regresult (
-    location character varying(255) NOT NULL,
-    metadata character varying(255) NOT NULL,
-    slicehash character varying(127) NOT NULL
-);
-
-
-ALTER TABLE diskprint.regresult OWNER TO postgres;
 
 --
 -- TOC entry 1565 (class 1259 OID 20629)
@@ -363,22 +338,23 @@ ALTER TABLE diskprint.sha1 OWNER TO postgres;
 -- Name: slice; Type: TABLE; Schema: diskprint; Owner: postgres; Tablespace: 
 --
 
---AJN TODO Add slicestate and slicehash to the generating code, and remove vmmachineid.
 --AJN TODO Check to see if slicetype 'Open' is being generated with a trailing whitespace in the string.
 CREATE TABLE diskprint.slice (
-    sliceid integer NOT NULL,
-    slicetype character varying(32) DEFAULT 'Default'::character varying NOT NULL,
     osetid character varying(50) NOT NULL,
     appetid character varying(50) NOT NULL,
+    sliceid integer NOT NULL,
+    predecessor_osetid character varying(50),
+    predecessor_appetid character varying(50),
+    predecessor_sliceid integer,
+    slicetype character varying(32) DEFAULT 'Default'::character varying NOT NULL,
     creationdate timestamp without time zone DEFAULT now() NOT NULL,
     slicenotes character varying(1023) NOT NULL,
-    slicestate character varying(127) DEFAULT 'latest'::character varying NOT NULL,
-    slicehash character varying(127) NOT NULL,
-    slicepredecessorid integer
+    slicestate character varying(127) DEFAULT 'latest'::character varying NOT NULL
 );
 
 
 ALTER TABLE diskprint.slice OWNER TO postgres;
+
 
 --
 -- TOC entry 1567 (class 1259 OID 20641)
@@ -437,9 +413,19 @@ ALTER TABLE diskprint.slicetype OWNER TO postgres;
 -- Name: storage; Type: TABLE; Schema: diskprint; Owner: postgres; Tablespace: 
 --
 
+--AJN The 'file_type' field should be 'pcap' for a .pcap file, 'disk' for a disk image file, 'ram' for a memory file, 'vm' for a snapshotted virtual machine, or 'slice' for a single-slice tarball.
+--AJN The hash should be the hash of the "subject data," not necessarily the file.  If stored in a raw format, then the hash is of the file.  In the case of disk images, the hash should be of the disk image stored within the file, not of the file itself.  (.E01 files embed timestamps at generation, making consistent hashing between repeated extractions impossible without carefully adjusting the system clock.)
+--AJN The hash should NOT be used as a foreign key.  Multiple slices can share the same disk state (e.g. the OS might not touch the disk).
+--AJN The "sliceid" field can be null, because a snapshotted virtual machine doesn't necessarily contain a unique slice---it can contain multiple slices.
+
 CREATE TABLE diskprint.storage (
+    osetid character varying(50) NOT NULL,
+    appetid character varying(50) NOT NULL,
+    sliceid integer,
     location character varying(1023) NOT NULL,
-    slicehash character varying(127) NOT NULL
+    hash character varying(127) NOT NULL,
+    filetype character varying(15) NOT NULL,
+    issource boolean NOT NULL
 );
 
 
@@ -589,7 +575,11 @@ ALTER TABLE ONLY celltype
 --
 
 ALTER TABLE ONLY filemetadata
-    ADD CONSTRAINT filemetadata_pkey PRIMARY KEY (slicehash, path, bytes, keyhash);
+    ADD CONSTRAINT filemetadata_pkey PRIMARY KEY (osetid, appetid, sliceid, path, bytes, keyhash);
+
+
+ALTER TABLE ONLY hive
+    ADD CONSTRAINT hive_pkey PRIMARY KEY (sequenceid, hivepath);
 
 
 --
@@ -612,14 +602,17 @@ ALTER TABLE ONLY md5
     ADD CONSTRAINT md5_pkey PRIMARY KEY (keyhash, hashval);
 
 
---
--- TOC entry 1884 (class 2606 OID 20685)
--- Dependencies: 1559 1559
--- Name: netchatter_pkey; Type: CONSTRAINT; Schema: diskprint; Owner: postgres; Tablespace: 
---
+--AJN Don't do this.  The primary key constraint requires predecessor_* to be non-null, but we want to allow nulls on those three fields.
+--ALTER TABLE ONLY namedsequence
+--    ADD CONSTRAINT namedsequence_pkey PRIMARY KEY (sequencelabel, osetid, appetid, sliceid, predecessor_osetid, predecessor_appetid, predecessor_sliceid);
 
-ALTER TABLE ONLY netchatter
-    ADD CONSTRAINT netchatter_pkey PRIMARY KEY (slicehash);
+
+ALTER TABLE ONLY namedsequenceid
+    ADD CONSTRAINT namedsequenceid_key UNIQUE (sequencelabel);
+
+
+ALTER TABLE ONLY namedsequenceid
+    ADD CONSTRAINT namedsequenceid_pkey PRIMARY KEY (sequenceid);
 
 
 --
@@ -633,23 +626,13 @@ ALTER TABLE ONLY os
 
 
 --
--- TOC entry 1888 (class 2606 OID 20689)
--- Dependencies: 1561 1561
--- Name: processqueue_pkey; Type: CONSTRAINT; Schema: diskprint; Owner: postgres; Tablespace: 
---
-
-ALTER TABLE ONLY processqueue
-    ADD CONSTRAINT processqueue_pkey PRIMARY KEY (slicehash);
-
-
---
 -- TOC entry 1890 (class 2606 OID 20691)
 -- Dependencies: 1563 1563
 -- Name: registry_pkey; Type: CONSTRAINT; Schema: diskprint; Owner: postgres; Tablespace: 
 --
 
 ALTER TABLE ONLY registry
-    ADD CONSTRAINT registry_pkey PRIMARY KEY (slicehash);
+    ADD CONSTRAINT registry_pkey PRIMARY KEY (osetid, appetid, sliceid);
 
 
 --
@@ -689,7 +672,7 @@ ALTER TABLE ONLY slicetype
 --
 
 ALTER TABLE ONLY storage
-    ADD CONSTRAINT storage_pkey PRIMARY KEY (slicehash);
+    ADD CONSTRAINT storage_pkey PRIMARY KEY (osetid, appetid, sliceid, hash, filetype, issource);
 
 
 --
@@ -713,32 +696,21 @@ ALTER TABLE ONLY vmsetting
 
 
 --
--- TOC entry 1918 (class 2620 OID 20704)
--- Dependencies: 1570 18
--- Name: processtrigger; Type: TRIGGER; Schema: diskprint; Owner: postgres
---
-
-CREATE TRIGGER processtrigger AFTER INSERT ON storage FOR EACH ROW EXECUTE PROCEDURE queueprocess();
-
-
---
 -- TOC entry 1903 (class 2606 OID 29142)
 -- Dependencies: 1555 1570 1897
--- Name: filemetadata_slicehash_fkey; Type: FK CONSTRAINT; Schema: diskprint; Owner: postgres
+-- Name: filemetadata_fkey; Type: FK CONSTRAINT; Schema: diskprint; Owner: postgres
 --
 
 ALTER TABLE ONLY filemetadata
-    ADD CONSTRAINT filemetadata_slicehash_fkey FOREIGN KEY (slicehash) REFERENCES storage(slicehash);
+    ADD CONSTRAINT filemetadata_fkey FOREIGN KEY (osetid, appetid, sliceid) REFERENCES slice(osetid, appetid, sliceid);
 
 
---
--- TOC entry 1904 (class 2606 OID 29098)
--- Dependencies: 1559 1897 1570
--- Name: netchatter_slicehash_fkey; Type: FK CONSTRAINT; Schema: diskprint; Owner: postgres
---
+ALTER TABLE ONLY hive
+    ADD CONSTRAINT hive_fkey FOREIGN KEY (sequenceid) REFERENCES namedsequenceid(sequenceid);
 
-ALTER TABLE ONLY netchatter
-    ADD CONSTRAINT netchatter_slicehash_fkey FOREIGN KEY (slicehash) REFERENCES storage(slicehash);
+
+ALTER TABLE ONLY namedsequence
+    ADD CONSTRAINT namedsequence_fkey FOREIGN KEY (sequencelabel) REFERENCES namedsequenceid(sequencelabel);
 
 
 --
@@ -758,10 +730,13 @@ ALTER TABLE ONLY os
 --
 
 ALTER TABLE ONLY regdelta
-    ADD CONSTRAINT regdelta_sliceid_fkey FOREIGN KEY (sliceid, osetid, appetid) REFERENCES slice(sliceid, osetid, appetid);
+    ADD CONSTRAINT regdelta_cellaction_fkey FOREIGN KEY (cellaction) REFERENCES cell(actionid);
 
 ALTER TABLE ONLY regdelta
-    ADD CONSTRAINT regdelta_cellaction_fkey FOREIGN KEY (cellaction) REFERENCES cell(actionid);
+    ADD CONSTRAINT regdelta_sequenceid_fkey FOREIGN KEY (sequenceid) REFERENCES namedsequenceid(sequenceid);
+
+ALTER TABLE ONLY regdelta
+    ADD CONSTRAINT regdelta_sliceid_fkey FOREIGN KEY (sliceid, osetid, appetid) REFERENCES slice(sliceid, osetid, appetid);
 
 
 --
@@ -809,11 +784,11 @@ ALTER TABLE ONLY regdelta
 --
 -- TOC entry 1911 (class 2606 OID 20735)
 -- Dependencies: 1570 1897 1563
--- Name: registry_slicehash_fkey; Type: FK CONSTRAINT; Schema: diskprint; Owner: postgres
+-- Name: registry_fkey; Type: FK CONSTRAINT; Schema: diskprint; Owner: postgres
 --
 
 ALTER TABLE ONLY registry
-    ADD CONSTRAINT registry_slicehash_fkey FOREIGN KEY (slicehash) REFERENCES storage(slicehash);
+    ADD CONSTRAINT registry_fkey FOREIGN KEY (osetid, appetid, sliceid) REFERENCES slice(osetid, appetid, sliceid);
 
 
 --
@@ -824,16 +799,6 @@ ALTER TABLE ONLY registry
 
 ALTER TABLE ONLY slice
     ADD CONSTRAINT slice_etid_fkey FOREIGN KEY (osetid) REFERENCES os(osetid);
-
-
---
--- TOC entry 1915 (class 2606 OID 29168)
--- Dependencies: 1566 1570 1897
--- Name: slice_slicehash_fkey; Type: FK CONSTRAINT; Schema: diskprint; Owner: postgres
---
-
-ALTER TABLE ONLY slice
-    ADD CONSTRAINT slice_slicehash_fkey FOREIGN KEY (slicehash) REFERENCES storage(slicehash);
 
 
 --
@@ -854,6 +819,16 @@ ALTER TABLE ONLY slice
 
 ALTER TABLE ONLY slice
     ADD CONSTRAINT slice_slicetype_fkey FOREIGN KEY (slicetype) REFERENCES slicetype(type);
+
+
+--
+-- TOC entry 1915 (class 2606 OID 29168)
+-- Dependencies: 1566 1570 1897
+-- Name: storage_fkey; Type: FK CONSTRAINT; Schema: diskprint; Owner: postgres
+--
+
+ALTER TABLE ONLY storage
+    ADD CONSTRAINT storage_fkey FOREIGN KEY (osetid, appetid, sliceid) REFERENCES slice(osetid, appetid, sliceid);
 
 
 --
@@ -920,15 +895,15 @@ GRANT ALL ON filemetadata           TO diskprint_writer;
 GRANT ALL ON hive                   TO diskprint_writer;
 GRANT ALL ON hive_hiveid_seq        TO diskprint_writer;
 GRANT ALL ON md5                    TO diskprint_writer;
+GRANT ALL ON namedsequence          TO diskprint_writer;
+GRANT ALL ON namedsequenceid        TO diskprint_writer;
+GRANT ALL ON namedsequenceid_sequenceid_seq TO diskprint_writer;
 GRANT ALL ON os                     TO diskprint_writer;
-GRANT ALL ON processqueue           TO diskprint_writer;
 GRANT ALL ON regdelta               TO diskprint_writer;
 GRANT ALL ON registry               TO diskprint_writer;
-GRANT ALL ON regresult              TO diskprint_writer;
 GRANT ALL ON sha1                   TO diskprint_writer;
 GRANT ALL ON slice                  TO diskprint_writer;
 GRANT ALL ON slice_sliceid_seq      TO diskprint_writer;
-GRANT ALL ON slicestate             TO diskprint_writer;
 GRANT ALL ON slicestate             TO diskprint_writer;
 GRANT ALL ON slicetype              TO diskprint_writer;
 GRANT ALL ON storage                TO diskprint_writer;
