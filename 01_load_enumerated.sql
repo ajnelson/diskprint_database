@@ -67,6 +67,7 @@ INSERT INTO diskprint.slicetype (type) VALUES ('Restart');
 INSERT INTO diskprint.slicetype (type) VALUES ('Shutdown');
 INSERT INTO diskprint.slicetype (type) VALUES ('Start');
 INSERT INTO diskprint.slicetype (type) VALUES ('Uninstall');
+INSERT INTO diskprint.slicetype (type) VALUES ('Idle');
 
 
 
